@@ -1,0 +1,8 @@
+{
+  "account": "你的学号或手机号",
+  "password": "你的密码",
+  "portal": "http://172.25.251.2",
+  "terminal": "phone",
+  "autoRelogin": true,
+  "checkSeconds": 30
+}
