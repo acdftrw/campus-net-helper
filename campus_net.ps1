@@ -674,7 +674,17 @@ try {
 }
 $notify.Text = '校园网助手'
 $notify.Visible = $true
-$notify.Add_DoubleClick({ $form.ShowInTaskbar = $true; $form.Show(); $form.WindowState = 'Normal'; $form.Activate() })
+
+# 还原主窗口：不要碰 ShowInTaskbar，切换它会让 WinForms 重建窗口句柄，
+# 表现为“只闪一帧就消失”。只改 WindowState 即可稳定还原。
+function Show-MainForm {
+    if (-not $form.Visible) { $form.Show() }
+    $form.WindowState = 'Normal'
+    $form.BringToFront()
+    $form.Activate()
+}
+
+$notify.Add_DoubleClick({ Show-MainForm })
 
 $menu = New-Object System.Windows.Forms.ContextMenuStrip
 $miShow = $menu.Items.Add('显示主界面')
@@ -683,7 +693,7 @@ $miLogout = $menu.Items.Add('注销')
 [void]$menu.Items.Add('-')
 $miExit = $menu.Items.Add('退出')
 $notify.ContextMenuStrip = $menu
-$miShow.Add_Click({ $form.ShowInTaskbar = $true; $form.Show(); $form.WindowState = 'Normal'; $form.Activate() })
+$miShow.Add_Click({ Show-MainForm })
 $miLogin.Add_Click({ $script:Working = $false; Do-Login })
 $miLogout.Add_Click({ Logout-Portal $cfg | Out-Null; Start-Sleep -Milliseconds 800; Update-State })
 $miExit.Add_Click({
