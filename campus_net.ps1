@@ -455,6 +455,11 @@ $form.StartPosition = 'CenterScreen'
 $form.FormBorderStyle = 'FixedSingle'
 $form.MaximizeBox = $false
 $form.Font = New-Object System.Drawing.Font('Microsoft YaHei UI', 9)
+# 开机自启：以最小化状态出现，不抢占前台；需要操作时点托盘图标还原
+if ([bool]$cfg.startMinimized) {
+    $form.WindowState = 'Minimized'
+    $form.ShowInTaskbar = $false
+}
 
 $lblAccount = New-Object System.Windows.Forms.Label
 $lblAccount.Text = '账号'
@@ -777,12 +782,6 @@ $timer.Start()
 $form.Add_Shown({
     Write-Log ('校园网助手 v{0} 启动' -f $script:Version) 'INFO'
     Update-State
-    # 开机自启用：直接缩进托盘，不抢焦点
-    if ([bool]$cfg.startMinimized) {
-        $form.ShowInTaskbar = $false
-        $form.WindowState = 'Minimized'
-        $form.Hide()
-    }
 })
 
 $form.Add_FormClosing({
