@@ -11,6 +11,7 @@
 - **静默启动**：配套 `launch.vbs` 以隐藏窗口方式拉起，不弹黑框，可做成桌面快捷方式。
 - **两种终端类型**：登录时按类型提交 `R6=1`（手机）或 `R6=0`（电脑），并在切换前自动调用 `mac/unbind` 清理 AC 上的旧绑定，否则旧类型会被沿用。
 - **掉线自动重连**：定时检测在线状态，失败按 30 → 60 → 120 → 240 → 300 秒退避重试，恢复后自动复位。
+- **开机静默自启**：放进“启动”文件夹即可，登录 Windows 后无窗口拉起，直接缩在托盘里把网连上；网络尚未就绪时按固定间隔等待，不做无意义的失败退避。
 - **精确识别本机会话**：同一账号可能有多台设备同时在线，工具按本机 IP / MAC 匹配会话，不会把别的设备的名额当成本机的。
 - **只读诊断**：`-Status` 一屏输出网卡、配置、在线会话（含 `phone_flag`）、门户认证状态、外网连通性，排障第一步。
 - **单实例保护**：互斥量保护，避免多个实例互相注销把会话搅乱。
@@ -41,8 +42,28 @@ powershell -ExecutionPolicy Bypass -File .\campus_net.ps1
 | `terminal` | `phone` 占手机名额，`pc` 占电脑名额 | `"phone"` |
 | `autoRelogin` | 是否掉线自动重连 | `true` |
 | `checkSeconds` | 检测间隔秒数（下限 15，实际不低于 30） | `30` |
+| `startMinimized` | 启动后直接缩进托盘，不弹主窗口（配合开机自启） | `true` |
 
 界面上的填写内容在点“登录”时写回该文件。
+
+## 开机自动启动
+
+推荐用“启动”文件夹，免管理员权限，登录后即生效：
+
+```powershell
+$startup = [Environment]::GetFolderPath('Startup')
+notepad (Join-Path $startup '校园网助手.vbs')
+```
+
+内容替换为（按实际安装路径调整）：
+
+```vbscript
+Set sh = CreateObject("WScript.Shell")
+cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""D:\DrcomLogin\campus_net.ps1"""
+sh.Run cmd, 0, False
+```
+
+配合 `config.json` 里的 `"terminal": "phone"` 与 `"startMinimized": true`，开机后不需要任何手动操作：程序静默启动 → 检测到未认证 → 以手机终端类型登录；若当前占的是电脑名额，会自动注销、解绑 MAC 后重新以手机身份登录。
 
 ## 命令行用法
 

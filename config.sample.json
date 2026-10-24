@@ -4,5 +4,6 @@
   "portal": "http://172.25.251.2",
   "terminal": "phone",
   "autoRelogin": true,
-  "checkSeconds": 30
+  "checkSeconds": 30,
+  "startMinimized": true
 }

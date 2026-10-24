@@ -29,6 +29,7 @@ $script:DefaultCfg = [ordered]@{
     terminal     = 'phone'
     autoRelogin  = $true
     checkSeconds = 30
+    startMinimized = $false
 }
 
 # ---------------- 配置 ----------------
@@ -668,7 +669,7 @@ try {
 }
 $notify.Text = '校园网助手'
 $notify.Visible = $true
-$notify.Add_DoubleClick({ $form.Show(); $form.WindowState = 'Normal'; $form.Activate() })
+$notify.Add_DoubleClick({ $form.ShowInTaskbar = $true; $form.Show(); $form.WindowState = 'Normal'; $form.Activate() })
 
 $menu = New-Object System.Windows.Forms.ContextMenuStrip
 $miShow = $menu.Items.Add('显示主界面')
@@ -677,7 +678,7 @@ $miLogout = $menu.Items.Add('注销')
 [void]$menu.Items.Add('-')
 $miExit = $menu.Items.Add('退出')
 $notify.ContextMenuStrip = $menu
-$miShow.Add_Click({ $form.Show(); $form.WindowState = 'Normal'; $form.Activate() })
+$miShow.Add_Click({ $form.ShowInTaskbar = $true; $form.Show(); $form.WindowState = 'Normal'; $form.Activate() })
 $miLogin.Add_Click({ $script:Working = $false; Do-Login })
 $miLogout.Add_Click({ Logout-Portal $cfg | Out-Null; Start-Sleep -Milliseconds 800; Update-State })
 $miExit.Add_Click({
@@ -700,6 +701,7 @@ $timer = New-Object System.Windows.Forms.Timer
 $timer.Interval = [int]($cfg.checkSeconds) * 1000
 if ($timer.Interval -lt 15000) { $timer.Interval = 30000 }
 $script:FailStreak = 0
+$script:WaitNetLogged = $false
 $script:BaseInterval = $timer.Interval
 $timer.Add_Tick({
     if ($script:Working) { return }
@@ -739,6 +741,19 @@ $timer.Add_Tick({
         return
     }
     if (-not $chkAuto.Checked) { Update-State; return }
+    # 开机初期 Wi-Fi 可能尚未连上：门户不可达且外网也不通，属“网络未就绪”，不进入失败退避
+    if (-not $ps.Ok) {
+        if (-not (Test-Internet)) {
+            if (-not $script:WaitNetLogged) {
+                Write-Log '网络尚未就绪（门户不可达、外网不通），按 30 秒间隔继续等待…' 'WARN'
+                $script:WaitNetLogged = $true
+            }
+            $timer.Interval = $script:BaseInterval
+            Update-State
+            return
+        }
+    }
+    $script:WaitNetLogged = $false
     $script:FailStreak = $script:FailStreak + 1
     $wait = [int][Math]::Min(300, [Math]::Max(30, ($script:BaseInterval / 1000) * [Math]::Pow(2, $script:FailStreak - 1)))
     $timer.Interval = $wait * 1000
@@ -762,6 +777,12 @@ $timer.Start()
 $form.Add_Shown({
     Write-Log ('校园网助手 v{0} 启动' -f $script:Version) 'INFO'
     Update-State
+    # 开机自启用：直接缩进托盘，不抢焦点
+    if ([bool]$cfg.startMinimized) {
+        $form.ShowInTaskbar = $false
+        $form.WindowState = 'Minimized'
+        $form.Hide()
+    }
 })
 
 $form.Add_FormClosing({
